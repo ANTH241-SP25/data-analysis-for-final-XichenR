@@ -1,29 +1,180 @@
 ---
-title: "data_analysis"
+title: "Data_analysis"
 output: html_document
-date: "2025-04-15"
+date: "2025-04-17"
 ---
-Replace this empty file with your data analysis .rmd file we created and started working on 04/15 in class! To do this go to your data cleaning file in R studio:
-File >> Save As >> Github >> data_analysis[yourname] (folder created by Github) >> final_project
+
 ```{r}
-#this file is meant to be empty
-```
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+install.packages("dunn.test")
+library(dunn.test)
 ```
 
-## Including Plots
+```{r}
+NHANES_analysis <- read.csv("/Users/renxichen/Documents/ANTH241 Project/clean_data")
+NHANES_analysis
+```
+factor
+```{r}
+factor(c(NHANES_analysis$Little_interest_do_things, NHANES_analysis$Controlling_or_losing_weight, NHANES_analysis$Difficulty_concentrating))
+factor(c(NHANES_analysis$Little_interest_frequency, NHANES_analysis$Drug_use_frequency, NHANES_analysis$Marijuana_use, NHANES_analysis$Sleep_timeEL), order=TRUE)
+head(NHANES_analysis)
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+frequency tables
+```{r}
+library(questionr)
+freq(NHANES_analysis$Marijuana_use, cum = TRUE, na.omit(NHANES_analysis$Marijuana_use))
+freq(NHANES_analysis$Sleep_timeEL, cum = TRUE)
+freq(NHANES_analysis$Drug_use_frequency, cum = TRUE)
+freq(NHANES_analysis$Little_interest_frequency, cum = TRUE)
+```
+
+
+mean, sd, count for sedentary activity (already finished drop_na and filter in data cleaning)
+```{r}
+NHANES_analysis%>%
+  summarize(mean(Sedentary_activity), sd(Sedentary_activity), count=n())
+```
+
+generate mean, sd, and count by little interest frequency
+```{r}
+NHANES_analysis%>%
+  group_by(Little_interest_frequency)%>%
+  summarize(mean(Sedentary_activity), sd(Sedentary_activity), count=n())
+```
+
+
+boxplot of sedentary activity by little interest frequency
+```{r}
+ggplot(NHANES_analysis, aes(x=Little_interest_frequency, y=Sedentary_activity))+geom_boxplot(fill="orange")+labs(x="Little Interest Frequency Levels", y="Sedentary Activity Minutes", title="Sedentary Minutes by Little Interest Frequency")
+```
+This is the graph showing how many minutes people in different interest levels do sedentary activity. 
+
+Kruskal Wallis and Dunn test
+```{r}
+dunn.test(x=NHANES_analysis$Sedentary_activity, g=NHANES_analysis$Little_interest_frequency, kw=TRUE)
+```
+There is a significant different in group of nearly everyday (have little interest in doing things) and group of not at all(p = 0.03), group of not at all and several days (p = 0.03).
+
+f test and t test for difficulty concentrating
+```{r}
+var.test(Little_interest_do_things~Difficulty_concentrating, data=NHANES_analysis, alternative="two.sided")
+t.test(Little_interest_do_things~Difficulty_concentrating, var.equal=TRUE, data=NHANES_analysis)
+```
+p = 0.9, there is not significant difference in having difficulty concentrating or not between groups of people who have different levels of interest doing things.
+
+f test and t test for controlling or losing weight
+```{r}
+var.test(Little_interest_do_things~Controlling_or_losing_weight, data=NHANES_analysis, alternative="two.sided")
+t.test(Little_interest_do_things~Controlling_or_losing_weight, var.equal=TRUE, data=NHANES_analysis)
+```
+p = 0.27, there is not significant difference in controlling or losing weight between groups of people who have different levels of interest doing things.
+
+chi square of drug use and little interest do things
+```{r}
+Drug_Little_table <- xtabs(~ Drug_use_frequency + Little_interest_frequency, data=NHANES_analysis)
+Drug_Little_table
+prop.table(Drug_Little_table)*100
+chisq.test(Drug_Little_table)
+```
+p = 0.15, there is not significant difference in drug using among groups of people have different levels of interest doing things.
+
+little interest in doing things
+```{r}
+ggplot(NHANES_analysis, aes(x=Little_interest_frequency))+geom_bar(fill="pink")+labs(title="Distribution of Having Little Interest in Doing Things", x="Levels", y="Counts")+geom_text(stat = 'count',aes(label=..count..),vjust=-0.5)
+```
+
+sedentary activity
+```{r}
+ggplot(NHANES_analysis, aes(x=Sedentary_activity))+geom_bar(fill="black")+labs(title = "Distribution of Sedentary Activity", x="Sedentary Activity", y="Counts")
+```
+marijuana use
+```{r}
+ggplot(NHANES_analysis, aes(x=Drug_use_frequency))+geom_bar(fill="pink")+labs(title = "Drug Use Frequency", x="Drug Use Frequency", y="Counts") + geom_text(stat = 'count',aes(label=..count..),vjust=-0.5)
+```
+Difficulty concentrating
+```{r}
+ggplot(NHANES_analysis, aes(x=Difficulty_concentrating))+geom_bar(fill="pink")+labs(title = "Difficulty Concentrating", x="Difficulty Concentrating", y="Counts") + geom_text(stat = 'count',aes(label=..count..),vjust=-0.5)
+```
+
+Controlling or Losing Weight
+```{r}
+ggplot(NHANES_analysis, aes(x=Controlling_or_losing_weight))+geom_bar(fill="pink")+labs(title = "Controlling or Losing Weight", x="Controlling or Losing Weight", y="Counts") + geom_text(stat = 'count',aes(label=..count..),vjust=-0.5)
+```
+
+
+Distribution of Sleep early or late
+```{r}
+ggplot(NHANES_analysis, aes(x=Little_interest_frequency, fill=Sleep_timeEL))+geom_bar(position="dodge")+labs(title="Distribution of Sleep Early or Late in Levels", x="Levels of Having Little Interest in Doing Things", y="Sleep Time")
+```
+This is a bar chart showing the distribution of different sleep time in each levels of having little interest in doing things. 
+
+```{r}
+NHANES_analysis%>%
+  group_by(Sleep_timeEL)%>%
+  summarize(count=n())
+```
+
+little interest and sedentary
+```{r}
+ggplot(aes(x=Little_interest_do_things, y=Sedentary_activity), data=NHANES_analysis) + geom_point(color="orange") + geom_smooth(method=lm, color="black") + labs(x="Little Interest Levels", y="Sedentary Activity", title="Little Interest and Sedentary Minutes") + theme_bw()
+cor.test(NHANES_analysis$Little_interest_do_things, NHANES_analysis$Sedentary_activity, method="pearson")
+```
+p = 0.007, there is a significant difference among sedentary activity minutes in different levels of having interest in doing things. In this graph, the levels are: 0 = not at all, 1 = several days, 2 = more than half of the days, 3 = nearly everyday.
+
+little interest and marijuana use
+```{r}
+ggplot(aes(x=Little_interest_do_things, y=Marijuana_use), data=NHANES_analysis) + geom_point(color="orange") + geom_smooth(method=lm, color="black") + labs(x="Little Interest Levels", y="Marijuana Use Levels", title="Little Interest and Drug Use") + theme_bw()
+cor.test(NHANES_analysis$Little_interest_do_things, NHANES_analysis$Marijuana_use, method="pearson")
+```
+p = 0.15, there is not significant difference among marijuana using in different levels of having interest in doing things. In this graph, the levels of little interest are: 0 = not at all, 1 = several days, 2 = more than half of the days, 3 = nearly everyday, the levels of marijuana use are: 1 = rarely, 2 = sometimes, 3 = often, 4 = usually, 5 = always. 
+
+
+linear regression model of little interest and sedentary activity
+```{r}
+Little_Sedentary_fit <- lm(Little_interest_do_things~Sedentary_activity, data=NHANES_analysis)
+summary(Little_Sedentary_fit)
+```
+y(little interest) = 0.33 + sedentary activity (0.0004)
+r squared value: 0.012
+p value = 0.007 which is significant
+
+odds ratio of little interest and usual sleep time
+```{r}
+Sleep_Little_odds_table <- table(NHANES_analysis$Sleep_timeEL, NHANES_analysis$Little_interest_frequency)
+oddsratio(Sleep_Little_odds_table)
+ggplot(data=NHANES_analysis) + geom_mosaic(aes(x=product(Sleep_timeEL), fill=Little_interest_frequency), na.rm=TRUE, show.legend=FALSE) + labs(title="Sleep Time by Little Interest Levels", x="Sleep Time", y="Little Interest Levels")
+```
+compare to early, odds ratios are: irregular: 3.35, late: 1.14, normal/medium: 2.21, super late: 1.39.
+there is no p value < 0.05 which means that there is not significant difference among any of them. 
+
+odds ratio of little interest and drug use
+```{r}
+Drug_Little_odds_table <- table(NHANES_analysis$Drug_use_frequency, NHANES_analysis$Little_interest_frequency)
+oddsratio(Drug_Little_odds_table)
+ggplot(data=NHANES_analysis) + geom_mosaic(aes(x=product(Drug_use_frequency), fill=Little_interest_frequency), na.rm=TRUE, show.legend=FALSE) + labs(title="Drug Use by Little Interest Levels", x="Drug Use Frequency", y="Little Interest Levels")
+```
+compare to always, odds ratios are: often: 0.54, rarely: 0.84, sometimes: 1.55, usually: 1.19
+there is no p value < 0.05 which means that there is not significant difference among any of them
+
+odds ratio of little interest and difficulty concentrating
+```{r}
+Concentrate_Little_odds_table <- table(NHANES_analysis$Little_interest_frequency, NHANES_analysis$Difficulty_concentrating)
+oddsratio(Concentrate_Little_odds_table)
+ggplot(data=NHANES_analysis) + geom_mosaic(aes(x=product(Little_interest_frequency), fill=Difficulty_concentrating), na.rm=TRUE, show.legend=FALSE) + labs(title="Difficulty Concentrating by Little Interest Levels", x="Little Interest Levels", y="Difficulty Concentrating")
+```
+compare to more than half of the days, odds ratios are: nearly everyday: 0.35, not at all: 0.92, several days: 1.43.
+there is no p value < 0.05 which means there is not significant difference among any of them.
+
+odds ratio of little interest and controlling or losing weight
+```{r}
+Weight_Little_odds_table <- table(NHANES_analysis$Little_interest_frequency, NHANES_analysis$Controlling_or_losing_weight)
+oddsratio(Weight_Little_odds_table)
+ggplot(data=NHANES_analysis) + geom_mosaic(aes(x=product(Little_interest_frequency), fill=Controlling_or_losing_weight), na.rm=TRUE, show.legend=FALSE) + labs(title="Controlling or losing weight by Little Interest Levels", x="Little Interest Levels", y="Controlling or Losing Weight")
+```
+compare to more than half of the days, odds ratios are: nearly everyday: 1.10,not at all: 1.39, several days: 1.22.
+there is no p value < 0.05 which means there is not significant difference among any of them. 
